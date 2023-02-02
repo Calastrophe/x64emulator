@@ -1,5 +1,5 @@
-use unicorn_engine::{RegisterX86::{*}, Unicorn};
-use unicorn_engine::unicorn_const::{Arch, Mode, Permission, SECOND_SCALE};
+use unicorn_engine::{RegisterX86, Unicorn};
+use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
 use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
@@ -46,17 +46,33 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     emu.emu_start(0x1000, (0x1000 + instructions.len() - 1) as u64, 0, 0).unwrap();
 
-    println!("The return value of the function: {} \nThe starting values RDI and RSI : {} {}", emu.reg_read(RAX).unwrap(), emu.reg_read(RDI).unwrap(), emu.reg_read(RSI).unwrap());
+    print_registers(&mut emu);
 
     Ok(())
 }
 
+// fn arg_iter() -> impl Iterator<Item = RegisterX86>{
+//     [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9].iter().copied()
+// }
 
+fn reg_iter() -> impl Iterator<Item = RegisterX86> {
+    [RegisterX86::RAX, RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9].iter().copied()
+}
+
+
+// TODO: Make this sometype of loop with arg iter
 fn setup_registers(emulator: &mut Unicorn<()>, args: &Arguments) {
-    emulator.reg_write(RDI, args._rdi).expect("failed to write RDI");
-    emulator.reg_write(RSI, args._rsi).expect("failed to write RSI");
-    emulator.reg_write(RDX, args._rdx).expect("failed to write RDI");
-    emulator.reg_write(RCX, args._rcx).expect("failed to write RSI");
-    emulator.reg_write(R8, args._r8).expect("failed to write R8");
-    emulator.reg_write(R9, args._r9).expect("failed to write R9");
+    emulator.reg_write(RegisterX86::RDI, args._rdi).expect("failed to write RDI");
+    emulator.reg_write(RegisterX86::RSI, args._rsi).expect("failed to write RSI");
+    emulator.reg_write(RegisterX86::RDX, args._rdx).expect("failed to write RDI");
+    emulator.reg_write(RegisterX86::RCX, args._rcx).expect("failed to write RSI");
+    emulator.reg_write(RegisterX86::R8, args._r8).expect("failed to write R8");
+    emulator.reg_write(RegisterX86::R9, args._r9).expect("failed to write R9");
+}
+
+fn print_registers(emulator: &mut Unicorn<()>) {
+    for reg in reg_iter() {
+        let ret_val = emulator.reg_read(reg).expect("Failed to read a register.");
+        println!("{:?} : {}", reg, ret_val);
+    }
 }
