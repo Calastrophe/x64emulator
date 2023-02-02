@@ -7,4 +7,4 @@ x64emulator is a way to quickly analyze a given .o file and see what it may retu
 Download and modify to your liking and use "cargo run" or "cargo build".
 
 To use the example in tests,
-``cargo run absdiff.o 3 4``
+``cargo run tests\absdiff.o 3 4``
