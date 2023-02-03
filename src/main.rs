@@ -4,31 +4,18 @@ use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
 use std::fs;
+mod parser;
 
+pub const ARG_TABLE: [RegisterX86; 6] = [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
+pub const REG_TABLE: [RegisterX86; 7] = [RegisterX86::RAX, RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
 
-#[derive(Default, Parser, Debug)]
-struct Arguments {
-    o_file : String,
-    #[clap(default_value_t=0)]
-    _rdi : u64,
-    #[clap(default_value_t=0)]
-    _rsi : u64,
-    #[clap(default_value_t=0)]
-    _rdx : u64,
-    #[clap(default_value_t=0)]
-    _rcx : u64,
-    #[clap(default_value_t=0)]
-    _r8 : u64,
-    #[clap(default_value_t=0)]
-    _r9 : u64
-}
 
 
 // Read the given file, grab the .text section, memory map into the emulator
 // Start at the beginning with CLI numbers for the registers
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = Arguments::parse();
-    let bin_data = fs::read(args.o_file.clone())?;
+    let args = parser::Arguments::parse();
+    let bin_data = fs::read(args.filename())?;
     let obj_file = object::File::parse(&*bin_data)?;
     let Some(text_section) = obj_file.section_by_name(".text") else {
         panic!("This object file does not contain a .text section")
@@ -39,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
     let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64).expect("failed to initalize the emulator");
-    emu.mem_map(0x1000, 0x8000, Permission::ALL).expect("failed to map");
+    emu.mem_map(0x1000, page_align_up(instructions.len()), Permission::ALL).expect("failed to map");
     emu.mem_write(0x1000, instructions).expect("failed to write instructions");
 
     setup_registers(&mut emu, &args);
@@ -51,28 +38,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// fn arg_iter() -> impl Iterator<Item = RegisterX86>{
-//     [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9].iter().copied()
-// }
-
-fn reg_iter() -> impl Iterator<Item = RegisterX86> {
-    [RegisterX86::RAX, RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9].iter().copied()
-}
-
-
-// TODO: Make this sometype of loop with arg iter
-fn setup_registers(emulator: &mut Unicorn<()>, args: &Arguments) {
-    emulator.reg_write(RegisterX86::RDI, args._rdi).expect("failed to write RDI");
-    emulator.reg_write(RegisterX86::RSI, args._rsi).expect("failed to write RSI");
-    emulator.reg_write(RegisterX86::RDX, args._rdx).expect("failed to write RDI");
-    emulator.reg_write(RegisterX86::RCX, args._rcx).expect("failed to write RSI");
-    emulator.reg_write(RegisterX86::R8, args._r8).expect("failed to write R8");
-    emulator.reg_write(RegisterX86::R9, args._r9).expect("failed to write R9");
+// TODO: Could potentially refactor this weird function
+fn setup_registers(emulator: &mut Unicorn<()>, args: &parser::Arguments) {
+    for (i, arg) in args.registers().iter().enumerate() {
+        emulator.reg_write(ARG_TABLE[i], *arg).expect("failed to write a register");
+    }
 }
 
 fn print_registers(emulator: &mut Unicorn<()>) {
-    for reg in reg_iter() {
-        let ret_val = emulator.reg_read(reg).expect("Failed to read a register.");
+    for reg in REG_TABLE {
+        let ret_val = emulator.reg_read(reg).expect("failed to read a register");
         println!("{:?} : {}", reg, ret_val);
     }
+}
+
+fn page_align_up(num: usize) -> usize {
+    (num) + ((0x1000)-1) & !((0x1000) - 1)
 }
