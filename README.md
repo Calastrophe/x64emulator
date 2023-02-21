@@ -13,6 +13,7 @@ To use the example in tests,
 
 The order in which registers are passed over the command line is %rdi, %rsi, %rdx, %rcx, %r8, %r9.
 So in the case of, ``cargo run tests\M1.o 3 4``, %rdi is now 3 and %rsi is 4.
+
 The function you've provided with the .o file will now be emulated with the given arguments.
 
 After emulation is finished, the emulator will spit out the register state at the end of emulation.
