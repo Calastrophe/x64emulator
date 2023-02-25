@@ -42,3 +42,15 @@ R9 : 0
 
 Now you can see the effects the function has on the registers and what it returns.
 
+# Array support
+
+Before 0.0.2, x64emulator did not support pointers to arrays, but now it supports a generic pointer to array and size function.
+Such a function signature would look like, `void some_function(int* someArray, int sizeOfArray);`
+
+
+The first argument being a pointer to the array is what matters, everything else is ignored by the emulator.
+Based off the arguments you pass to the emulator, we can dynamically determine the size of the array in memory.
+
+For example, if you did `x64emulator.exe M3.o 9000 3 -a 9000 -v 1,2,3,4` - you would be telling the emulator to store at the address 9000 the values 1,2,3,4. 
+
+In reality, this isn't the exact place it will be located as the emulator just forces your array to be located on a page boundary. Anything you put into the RDI register will be overwritten with the proper address value. Everything else is passed as normal and you can assume the function you have provided will be emulated properly.
