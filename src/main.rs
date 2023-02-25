@@ -48,7 +48,7 @@ fn setup_registers(emulator: &mut Unicorn<()>, args: &parser::Arguments) {
 fn print_registers(emulator: &mut Unicorn<()>) {
     for reg in REG_TABLE {
         let ret_val = emulator.reg_read(reg).expect("failed to read a register");
-        println!("{:?} : {}", reg, ret_val);
+        println!("{:?} : {ret_val}\n Binary view: {ret_val:b}", reg);
     }
 }
 
