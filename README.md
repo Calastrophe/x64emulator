@@ -44,7 +44,7 @@ Now you can see the effects the function has on the registers and what it return
 
 # Array support
 
-Before 0.0.2, x64emulator did not support pointers to arrays, but now it supports a generic pointer to array and size function.
+Before 0.2, x64emulator did not support pointers to arrays, but now it supports a generic pointer to array and size function.
 Such a function signature would look like, `void some_function(int* someArray, int sizeOfArray);`
 
 
