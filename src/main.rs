@@ -3,7 +3,7 @@ use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
 use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
-use std::fs;
+use std::{fs};
 mod parser;
 
 pub const ARG_TABLE: [RegisterX86; 6] = [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
@@ -26,12 +26,42 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 
     let mut emu = Unicorn::new(Arch::X86, Mode::MODE_64).expect("failed to initalize the emulator");
-    emu.mem_map(0x1000, page_align_up(instructions.len()), Permission::ALL).expect("failed to map");
+    let instructions_size = page_align_up(instructions.len());
+    emu.mem_map(0x1000, instructions_size, Permission::ALL).expect("failed to map");
+
+
+    // Handling potential arrays in memory
+    if let Some(array_address) = args.array_address {
+        let Some(array_values) = &args.values else {
+            panic!("You provided an array address, but did not specify the values to be stored at the address.")
+        };
+
+        // We have to align the addresses by a 4KB boundary
+        let array_address = page_align_down(array_address);
+        let array_size = page_align_up(array_values.len()*8);
+
+        // Is this array address in a mapped area?
+        if array_address >= 0x1000 && array_address <= instructions_size.try_into().unwrap() {
+            panic!("Conflicting array address, choose another position, currently mapped memory between 0x1000 and {:#x}", 0x1000+instructions_size);
+        }
+
+        emu.mem_map(array_address, array_size, Permission::ALL).expect("failed to map the array into the emulator");
+        // Turn Vec<u64> into Vec<u8>
+        let bytes = array_values.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>();
+        // Write the Vec<u8> to memory
+        emu.mem_write(array_address, &bytes).expect("failed to write the array");
+    }
+
     emu.mem_write(0x1000, instructions).expect("failed to write instructions");
 
     setup_registers(&mut emu, &args);
+    
+    // If array address is defined and we've got this far, just set it for the person, as they may have the wrong address
+    if let Some(array_address) = args.array_address {
+        emu.reg_write(RegisterX86::RDI, page_align_down(array_address)).expect("array pointer failed write");
+    }
 
-    emu.emu_start(0x1000, (0x1000 + instructions.len() - 1) as u64, 0, 0).unwrap();
+    emu.emu_start(0x1000, (0x1000 + instructions.len() - 1) as u64, 0, 0).expect("runtime error");
 
     print_registers(&mut emu);
 
@@ -45,7 +75,7 @@ fn setup_registers(emulator: &mut Unicorn<()>, args: &parser::Arguments) {
     }
 }
 
-fn print_registers(emulator: &mut Unicorn<()>) {
+fn print_registers(emulator: &Unicorn<()>) {
     for reg in REG_TABLE {
         let ret_val = emulator.reg_read(reg).expect("failed to read a register");
         println!("{:?} : {ret_val}\n Binary view: {ret_val:b}", reg);
@@ -54,4 +84,8 @@ fn print_registers(emulator: &mut Unicorn<()>) {
 
 fn page_align_up(num: usize) -> usize {
     (num) + ((0x1000)-1) & !((0x1000) - 1)
+}
+
+fn page_align_down(num: u64) -> u64 {
+    return (num) & !(0x1000-1);
 }
