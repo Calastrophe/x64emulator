@@ -3,7 +3,7 @@ use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
 use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
-use std::{fs};
+use std::fs;
 mod parser;
 
 pub const ARG_TABLE: [RegisterX86; 6] = [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
@@ -15,7 +15,7 @@ pub const REG_TABLE: [RegisterX86; 7] = [RegisterX86::RAX, RegisterX86::RDI, Reg
 // Start at the beginning with CLI numbers for the registers
 fn main() -> Result<(), Box<dyn Error>> {
     let args = parser::Arguments::parse();
-    let bin_data = fs::read(args.filename())?;
+    let bin_data = fs::read(&args.o_file)?;
     let obj_file = object::File::parse(&*bin_data)?;
     let Some(text_section) = obj_file.section_by_name(".text") else {
         panic!("This object file does not contain a .text section")
@@ -37,15 +37,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
 
         // We have to align the addresses by a 4KB boundary
-        let array_address = page_align_down(array_address);
+        let lower_bound = page_align_down(array_address);
         let array_size = page_align_up(array_values.len()*8);
 
-        // Is this array address in a mapped area?
-        if array_address >= 0x1000 && array_address <= instructions_size.try_into().unwrap() {
+        // If the address aligned downwards conflicts with a page already mapped, then we have an issue.
+        if lower_bound == 0x1000 {
             panic!("Conflicting array address, choose another position, currently mapped memory between 0x1000 and {:#x}", 0x1000+instructions_size);
         }
 
-        emu.mem_map(array_address, array_size, Permission::ALL).expect("failed to map the array into the emulator");
+        // Map the given memory into the emulator
+        emu.mem_map(lower_bound, array_size, Permission::ALL).expect("failed to map the array into the emulator");
+
         // Turn Vec<u64> into Vec<u8>
         let bytes = array_values.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>();
         // Write the Vec<u8> to memory
@@ -55,11 +57,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     emu.mem_write(0x1000, instructions).expect("failed to write instructions");
 
     setup_registers(&mut emu, &args);
-    
-    // If array address is defined and we've got this far, just set it for the person, as they may have the wrong address
-    if let Some(array_address) = args.array_address {
-        emu.reg_write(RegisterX86::RDI, page_align_down(array_address)).expect("array pointer failed write");
-    }
 
     emu.emu_start(0x1000, (0x1000 + instructions.len() - 1) as u64, 0, 0).expect("runtime error");
 

@@ -4,7 +4,7 @@ use clap::Parser;
 #[derive(Default, Parser, Debug)]
 #[clap(author = "Calastrophe", version, about)]
 pub struct Arguments {
-    o_file : String,
+    pub o_file : String,
     #[clap(default_value_t=0)]
     rdi : u64,
     #[clap(default_value_t=0)]
@@ -28,9 +28,5 @@ pub struct Arguments {
 impl Arguments {
     pub fn registers(&self) -> [u64; 6] {
         [self.rdi, self.rsi, self.rdx, self.rcx, self.r8, self.r9]
-    }
-
-    pub fn filename(&self) -> String {
-        self.o_file.clone()
     }
 }
