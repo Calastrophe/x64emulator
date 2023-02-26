@@ -4,7 +4,6 @@ use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
 use std::fs;
-use std::thread::current;
 mod parser;
 
 pub const ARG_TABLE: [RegisterX86; 6] = [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
