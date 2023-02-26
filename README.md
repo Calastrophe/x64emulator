@@ -48,7 +48,7 @@ x64emulator can accept one array in each function signature. If your function re
 
 `x64emulator.exe 10000 5 -a 10000 -v 5,2,10,3,7`
 
-In the case of the previous example, we are stating set RDI to 10000, RSI to 5, allocate an array at address 10000 with the values 5,2,10,3,7.
+In the case of the previous example, we are stating set RDI to 10000, RSI to 5, allocate an array at address 10000 with the values 5,2,10,3,7. The function signature looks something like `somefunction(int* myarray, size)`.
 
 If your pointer to the array was located in RSI, RCX, or RDX, you can specify that by doing something such as `x64emulator.exe 0 3 10000 -a 10000 5,2,5`.
-An example of a function signature that may have that looks like `somefunc(int random, int size, int* myarray[])`. Support for more than one array is planned for future releases.
+An example of a function signature that may have that looks like `somefunc(int random, int size, int* myarray)`. Support for more than one array is planned for future releases.
