@@ -4,6 +4,7 @@ use clap::Parser;
 use object::{Object,ObjectSection};
 use std::error::Error;
 use std::fs;
+use std::thread::current;
 mod parser;
 
 pub const ARG_TABLE: [RegisterX86; 6] = [RegisterX86::RDI, RegisterX86::RSI, RegisterX86::RDX, RegisterX86::RCX, RegisterX86::R8, RegisterX86::R9];
@@ -40,9 +41,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         let lower_bound = page_align_down(array_address);
         let array_size = page_align_up(array_values.len()*8);
 
+        let current_memory_end = (0x1000+instructions_size).try_into().unwrap();
+
         // If the address aligned downwards conflicts with a page already mapped, then we have an issue.
-        if lower_bound == 0x1000 {
-            panic!("Conflicting array address, choose another position, currently mapped memory between 0x1000 and {:#x}", 0x1000+instructions_size);
+        if lower_bound >= 0x1000 && lower_bound <= current_memory_end {
+            panic!("Conflicting array address, choose another position, currently mapped memory between 0x1000 and {:#x}", current_memory_end);
         }
 
         // Map the given memory into the emulator
