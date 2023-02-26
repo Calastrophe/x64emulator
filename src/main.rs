@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let lower_bound = page_align_down(array_address);
         let array_size = page_align_up(array_values.len()*8);
 
-        let current_memory_end = (0x1000+instructions_size).try_into().unwrap();
+        let current_memory_end = (0x1000+instructions_size) as u64;
 
         // If the address aligned downwards conflicts with a page already mapped, then we have an issue.
         if lower_bound >= 0x1000 && lower_bound <= current_memory_end {
@@ -60,7 +60,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     setup_registers(&mut emu, &args);
 
-    emu.emu_start(0x1000, (0x1000 + instructions.len() - 1) as u64, 0, 0).expect("runtime error");
+    let end_addr = (0x1000 + instructions.len() - 1) as u64;
+    emu.emu_start(0x1000, end_addr, 0, 0).expect("runtime error");
 
     print_registers(&mut emu);
 
