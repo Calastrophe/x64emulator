@@ -42,15 +42,13 @@ R9 : 0
 
 Now you can see the effects the function has on the registers and what it returns.
 
-# Array support
+# Emulating arrays
 
-Before 0.2, x64emulator did not support pointers to arrays, but now it supports a generic pointer to array and size function.
-Such a function signature would look like, `int some_function(int* someArray, int sizeOfArray);`
+x64emulator can accept one array in each function signature. If your function requires a pointer to an array, you must first tell the emulator through the command line arguments at which address the array should start with `-a`. After which, you provide the array values delimited by a comma with `-v`. An example of an object file which uses this is located in `tests\M3.o`, to emulate this file you'd use...
 
+`x64emulator.exe 10000 5 -a 10000 -v 5,2,10,3,7`
 
-The first argument being a pointer to the array is what matters, everything else is ignored by the emulator.
-Based off the arguments you pass to the emulator, we can dynamically determine the size of the array in memory.
+In the case of the previous example, we are stating set RDI to 10000, RSI to 5, allocate an array at address 10000 with the values 5,2,10,3,7. The function signature looks something like `somefunction(int* myarray, size)`.
 
-For example, if you did `x64emulator.exe M3.o 9000 3 -a 9000 -v 1,2,3,4` - you would be telling the emulator to store at the address 9000 the values 1,2,3,4. 
-
-In reality, this isn't the exact place it will be located as the emulator just forces your array to be located on a page boundary. Anything you put into the RDI register will be overwritten with the proper address value. Everything else is passed as normal and you can assume the function you have provided will be emulated properly.
+If your pointer to the array was located in RSI, RCX, or RDX, you can specify that by doing something such as `x64emulator.exe 0 3 10000 -a 10000 5,2,5`.
+An example of a function signature that may have that looks like `somefunc(int random, int size, int* myarray)`. Support for more than one array is planned for future releases.
