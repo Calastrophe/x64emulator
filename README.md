@@ -9,11 +9,11 @@ This is more aimed at trying to reverse engineer a specific function given in th
 Download and modify to your liking and use "cargo run" or "cargo build".
 
 To use the example in tests,
-``cargo run tests\absdiff.o 3 4``
+``x64emulator.exe absdiff.o 3 4``
 
 The order in which registers are passed over the command line is %rdi, %rsi, %rdx, %rcx, %r8, %r9.
 
-So in the case of, ``cargo run tests\M1.o 3 4``, %rdi is now 3 and %rsi is 4.
+So in the case of, ``x64emulator.exe M1.o 3 4``, %rdi is now 3 and %rsi is 4.
 
 The function you've provided with the .o file will now be emulated with the given arguments.
 
