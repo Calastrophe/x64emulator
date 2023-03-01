@@ -46,7 +46,7 @@ Now you can see the effects the function has on the registers and what it return
 
 x64emulator can accept one array in each function signature. If your function requires a pointer to an array, you must first tell the emulator through the command line arguments at which address the array should start with `-a`. After which, you provide the array values delimited by a comma with `-v`. An example of an object file which uses this is located in `tests\M3.o`, to emulate this file you'd use...
 
-`x64emulator.exe 10000 5 -a 10000 -v 5,2,10,3,7`
+`x64emulator.exe M3.o 10000 5 -a 10000 -v 5,2,10,3,7`
 
 In the case of the previous example, we are stating set RDI to 10000, RSI to 5, allocate an array at address 10000 with the values 5,2,10,3,7. The function signature looks something like `somefunction(int* myarray, size)`.
 
