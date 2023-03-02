@@ -1,6 +1,11 @@
-
+use eframe::egui;
 
 // The GUI component of x64emulator
+
+
+fn main() {
+
+}
 
 // Read in files, parse their naming, allocate some stuff in a Unicorn instance.
 
