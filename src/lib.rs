@@ -1,55 +1,96 @@
-use unicorn_engine::Unicorn;
+use unicorn_engine::{Unicorn, unicorn_const};
+use unicorn_engine::unicorn_const::uc_error;
 use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
-use object::{Object,ObjectSection, Architecture};
-use std::error::Error;
-use std::fs;
+use object::{Object,ObjectSection, Architecture, File};
+use thiserror::Error;
 
-// NOTE: This file is acting like the emulation library for the interface.
+// Add onto the file struct to generate Unicorn acceptable Arch/Mode
+trait ArchMode {
+    fn get_arch_and_mode(&self) -> Result<(Arch, Mode), LibErr>;
+}
 
-// A context which is created each time a new file is loaded.
-pub struct Context<'a> {
-    uc: Unicorn<'a, ()>, // Architecture and mode will be found here.
-    file: object::File<'a> // The file which is associated with this new context
+impl ArchMode for File<'_> {
+    // Only x86_64, ARM, ARM64 supported at the moment.
+    fn get_arch_and_mode(&self) -> Result<(Arch, Mode), LibErr> {
+        match self.architecture() {
+            Architecture::Aarch64 => {
+                match self.is_little_endian() {
+                    true => Ok((Arch::ARM64, Mode::ARM)),
+                    false => Ok((Arch::ARM64, Mode::ARM | Mode::BIG_ENDIAN))
+                }
+            }
+            Architecture::Arm => {
+                match self.is_little_endian() {
+                    true => Ok((Arch::ARM, Mode::ARM)),
+                    false => Ok((Arch::ARM, Mode::ARM | Mode::BIG_ENDIAN))
+                }
+            }
+            Architecture::X86_64 => Ok((Arch::X86, Mode::MODE_64)),
+            Architecture::X86_64_X32 => Ok((Arch::X86, Mode::MODE_32)),
+            _ => Err(LibErr::UnsupportedArch)
+        }
+    }
+}
+
+struct Context<'a> {
+    uc: Unicorn<'a, ()>,
+    file: File<'a>
 }
 
 impl<'a> Context<'a> {
-    // Only x86_x64, ARM, ARM64 supported at the moment.
-    fn get_arch_and_mode(&self) -> Option<(Arch, Mode)> {
-        match self.file.architecture() {
-            Architecture::Aarch64 => Some((Arch::ARM64, Mode::ARM)),
-            Architecture::Arm => Some((Arch::ARM, Mode::ARM)),
-            Architecture::X86_64 => Some((Arch::X86, Mode::MODE_64)),
-            Architecture::X86_64_X32 => Some((Arch::X86, Mode::MODE_32)),
-            _ => None
-        }
+    pub fn new(pefile: File) -> Result<Context, LibErr> {
+        let (arch, mode) = pefile.get_arch_and_mode()?;
+        let uc = Unicorn::new(arch, mode).expect("This should not fail...");
+        let context = Context{uc: uc, file: pefile};
+        // Map every region into the context from the pefile and return Context
+        todo!()
     }
 
-    // Generate function signatures to display in listing
-    // Try to use debug symbols to determine signature first
-    fn generate_function_sigs(&self) {
-        return;
+    // Given start and end will be aligned to meet emulator requirements.
+    pub fn mem_map(&mut self, start: usize, size: usize, perms: Permission) -> Result<(), LibErr> {
+        self.uc.mem_map(page_align_down(start) as u64, page_align_up(size), perms).map_err(|_e| LibErr::MemMapErr)
     }
 
-    pub fn new(filename: String) -> Self {
-        // Parse the given filename and parse into a File object
-
-        // Create a context with retrieved arch and mode
-
-        // Map each segment into the context's unicorn instance
-
-        
+    // Retrieves the memory regions and set an error that implements std::error::Error
+    pub fn mem_regions(&self) -> Result<Vec<unicorn_engine::unicorn_const::MemRegion>, LibErr> {
+        self.uc.mem_regions().map_err(|_e| LibErr::MemRegionErr)
     }
+
+    // Retrieves the functions inside the object/executable file
+    // NOTE: Return strings may not need to be an owned type?
+    pub fn functions(&self) -> Vec<String> { unimplemented!() }
+
+    // Retrieves the current state of the registers inside the Unicorn instance, depends on architecture.
+    pub fn registers(&self) -> Vec<usize> { unimplemented!() }
+
+    // Sets the state of the registers inside the Unicorn instance.
+    // TODO: Determine if bigger numbers than will fit in register should be allowed
+    // NOTE: usize *may* be bigger than the target architecture register. 
+    pub fn set_registers(&mut self, new_regs: Vec<usize>) { unimplemented!() }
+
+    // TODO: Outline calling convention for this function and its return
+    pub fn call_func(&mut self, start: usize) { unimplemented!() }
 }
 
 
-
-
+// TODO: RENAME
+#[derive(Error, Debug)]
+pub enum LibErr {
+    #[error("Unsupported architecture found in object/executable file.")]
+    UnsupportedArch,
+    #[error("There was an error mapping memory into the context.")]
+    MemMapErr,
+    #[error("There was an error reading memory regions.")]
+    MemRegionErr,
+    #[error("Unmapped error")]
+    Unknown
+}
 
 
 fn page_align_up(num: usize) -> usize {
     (num) + ((0x1000)-1) & !((0x1000) - 1)
 }
 
-fn page_align_down(num: u64) -> u64 {
-    return (num) & !(0x1000-1);
+fn page_align_down(num: usize) -> usize {
+    (num) & !(0x1000-1)
 }
