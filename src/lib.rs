@@ -1,8 +1,8 @@
-use unicorn_engine::{Unicorn, unicorn_const};
-use unicorn_engine::unicorn_const::uc_error;
-use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
+use unicorn_engine::Unicorn;
+use unicorn_engine::unicorn_const::{MemRegion, uc_error, Arch, Mode, Permission};
 use object::{Object,ObjectSection, Architecture, File};
 use thiserror::Error;
+
 
 // Add onto the file struct to generate Unicorn acceptable Arch/Mode
 trait ArchMode {
@@ -10,20 +10,22 @@ trait ArchMode {
 }
 
 impl ArchMode for File<'_> {
-    // Only x86_64, ARM, ARM64 supported at the moment.
+    // Only x86_64 and x86_64_32 is supported currently.
     fn get_arch_and_mode(&self) -> Result<(Arch, Mode), LibErr> {
         match self.architecture() {
             Architecture::Aarch64 => {
-                match self.is_little_endian() {
-                    true => Ok((Arch::ARM64, Mode::ARM)),
-                    false => Ok((Arch::ARM64, Mode::ARM | Mode::BIG_ENDIAN))
-                }
+                Err(LibErr::UnsupportedArch)
+                // match self.is_little_endian() {
+                //     true => Ok((Arch::ARM64, Mode::ARM)),
+                //     false => Ok((Arch::ARM64, Mode::ARM | Mode::BIG_ENDIAN))
+                // }
             }
             Architecture::Arm => {
-                match self.is_little_endian() {
-                    true => Ok((Arch::ARM, Mode::ARM)),
-                    false => Ok((Arch::ARM, Mode::ARM | Mode::BIG_ENDIAN))
-                }
+                Err(LibErr::UnsupportedArch)
+                // match self.is_little_endian() {
+                //     true => Ok((Arch::ARM, Mode::ARM)),
+                //     false => Ok((Arch::ARM, Mode::ARM | Mode::BIG_ENDIAN))
+                // }
             }
             Architecture::X86_64 => Ok((Arch::X86, Mode::MODE_64)),
             Architecture::X86_64_X32 => Ok((Arch::X86, Mode::MODE_32)),
@@ -46,19 +48,22 @@ impl<'a> Context<'a> {
         todo!()
     }
 
+
     // Given start and end will be aligned to meet emulator requirements.
     pub fn mem_map(&mut self, start: usize, size: usize, perms: Permission) -> Result<(), LibErr> {
         self.uc.mem_map(page_align_down(start) as u64, page_align_up(size), perms).map_err(|_e| LibErr::MemMapErr)
     }
 
     // Retrieves the memory regions and set an error that implements std::error::Error
-    pub fn mem_regions(&self) -> Result<Vec<unicorn_engine::unicorn_const::MemRegion>, LibErr> {
+    pub fn mem_regions(&self) -> Result<Vec<MemRegion>, LibErr> {
         self.uc.mem_regions().map_err(|_e| LibErr::MemRegionErr)
     }
 
     // Retrieves the functions inside the object/executable file
     // NOTE: Return strings may not need to be an owned type?
-    pub fn functions(&self) -> Vec<String> { unimplemented!() }
+    pub fn functions(&self) -> Vec<String> { 
+        unimplemented!() 
+    }
 
     // Retrieves the current state of the registers inside the Unicorn instance, depends on architecture.
     pub fn registers(&self) -> Vec<usize> { unimplemented!() }
@@ -71,6 +76,11 @@ impl<'a> Context<'a> {
     // TODO: Outline calling convention for this function and its return
     pub fn call_func(&mut self, start: usize) { unimplemented!() }
 }
+
+mod constants {
+    const ARM
+}
+
 
 
 // TODO: RENAME
